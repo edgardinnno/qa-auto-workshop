@@ -1,28 +1,40 @@
-# Playwright API + E2E tests for QA Turgus.
+# Playwright API + E2E tests for the QA Turgus practice shop.
 #
-# CI/CD variables (Settings → CI/CD → Variables), all optional:
+# Same shape as GitLab's "Getting Started" template — build → test → deploy —
+# but with real jobs instead of echo commands:
+#
+#   build   build-job       install dependencies, typecheck, lint, format and test-ID checks
+#   test    api-test-job    166 API tests                  ┐ run in parallel
+#           e2e-test-job    82 browser tests, in 2 shards  ┘
+#   deploy  report-job      merge all results into one HTML report (every pipeline)
+#           pages           publish that report to GitLab Pages (default branch only)
+#
+# Optional CI/CD variables (Settings → CI/CD → Variables):
 #   BASE_URL   storefront under test   (default: public GitHub Pages instance)
 #   API_URL    REST API incl. /api/    (default: public Cloudflare Workers instance)
-#   TEST_GREP  run a subset, e.g. "@smoke" (empty = everything)
+#   TEST_GREP  run a subset only, e.g. "@smoke" or "TC-012" (empty = everything)
 #
 # Nightly full run: Build → Pipeline schedules → New schedule on the default branch.
+#
+# For more information, see: https://docs.gitlab.com/ee/ci/yaml/
 
-stages:
-  - lint
+stages: # List of stages for jobs, and their order of execution
+  - build
   - test
-  - report
+  - deploy
 
-workflow:
+workflow: # When a pipeline is created at all
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # merge requests
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH # pushes to main
+    - if: $CI_PIPELINE_SOURCE == "schedule" # nightly schedule
+    - if: $CI_PIPELINE_SOURCE == "web" # "Run pipeline" button
 
-default:
-  # Keep the tag in sync with @playwright/test in package-lock.json — the image ships matching browsers.
+default: # Settings shared by every job unless a job overrides them
+  # Official Playwright image with browsers preinstalled.
+  # Keep the tag in sync with @playwright/test in package-lock.json.
   image: mcr.microsoft.com/playwright:v1.64.1-noble
-  cache:
+  cache: # Reuse the npm download cache between pipelines
     key:
       files:
         - package-lock.json
@@ -32,50 +44,50 @@ default:
     - npm ci --cache .npm --prefer-offline --no-audit --no-fund
 
 variables:
-  TEST_GREP: ''
+  TEST_GREP: '' # Empty = run every test
 
-lint:
-  stage: lint
+build-job: # This job runs in the build stage, which runs first.
+  stage: build
   script:
-    - npm run typecheck
-    - npm run lint
-    - npm run format:check
-    - npm run check:ids
+    - npm run typecheck # TypeScript compiles without errors
+    - npm run lint # ESLint + eslint-plugin-playwright rules
+    - npm run format:check # Prettier formatting
+    - npm run check:ids # Every test has a unique TC-NNN id
 
-.playwright-tests:
-  stage: test
-  needs: [lint]
+.test-job: # Hidden template (starts with a dot) shared by both test jobs
+  stage: test # It only starts when build-job completes successfully.
+  needs: [build-job]
   artifacts:
-    when: always
+    when: always # Keep results even when tests fail — that's when you need them most
     expire_in: 1 week
     paths:
-      - blob-report/
-      - junit-results/
-      - test-results/
+      - blob-report/ # Raw results, merged later by report-job
+      - junit-results/ # JUnit XML for GitLab's "Tests" tab and the MR widget
+      - test-results/ # Screenshots, videos and traces of failed tests
     reports:
       junit: junit-results/results.xml
 
-api-tests:
-  extends: .playwright-tests
+api-test-job: # This job runs in the test stage.
+  extends: .test-job # It can run at the same time as e2e-test-job (in parallel).
   variables:
     PLAYWRIGHT_BLOB_OUTPUT_NAME: report-api.zip
   script:
     - npx playwright test --project=api ${TEST_GREP:+--grep "$TEST_GREP"}
 
-e2e-tests:
-  extends: .playwright-tests
-  parallel: 2
+e2e-test-job: # This job also runs in the test stage.
+  extends: .test-job
+  parallel: 2 # Split the browser tests across 2 jobs: e2e-test-job 1/2 and 2/2
   variables:
     PLAYWRIGHT_BLOB_OUTPUT_NAME: report-e2e-${CI_NODE_INDEX}.zip
   script:
     - npx playwright test --project=e2e-chromium --shard=${CI_NODE_INDEX}/${CI_NODE_TOTAL} ${TEST_GREP:+--grep "$TEST_GREP"}
 
-merge-reports:
-  stage: report
+report-job: # This job runs in the deploy stage.
+  stage: deploy # It runs after the test jobs — even if they failed (when: always).
   needs:
-    - job: api-tests
+    - job: api-test-job
       artifacts: true
-    - job: e2e-tests
+    - job: e2e-test-job
       artifacts: true
   when: always
   script:
@@ -83,6 +95,26 @@ merge-reports:
   artifacts:
     when: always
     expire_in: 2 weeks
-    expose_as: Playwright report
+    expose_as: Playwright report # Adds a "Playwright report" link to merge requests
     paths:
       - playwright-report/
+
+pages: # GitLab Pages deploy — the job must be called "pages" and publish a "public/" folder.
+  stage: deploy # It runs on the default branch only, after report-job.
+  image: alpine:3.20 # Only copies files, so no need for the large Playwright image
+  cache: []
+  before_script: []
+  needs:
+    - job: report-job
+      artifacts: true
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: always # Publish the latest report even if some tests failed
+  environment:
+    name: test-report
+    url: $CI_PAGES_URL # Shown under Operate → Environments as a clickable link
+  script:
+    - mv playwright-report public
+  artifacts:
+    paths:
+      - public

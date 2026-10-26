@@ -109,12 +109,21 @@ contract checks against `src/api/openapi.json`. Refresh that file deliberately w
 
 ## CI (GitLab)
 
-`.gitlab-ci.yml` runs on merge requests, the default branch, schedules and manual runs:
+`.gitlab-ci.yml` follows GitLab's build → test → deploy layout. It runs on merge requests, the default branch,
+schedules and manual runs.
 
-`lint` (typecheck, ESLint, Prettier, test IDs) → `api-tests` + `e2e-tests` (2 shards) → `merge-reports` (single HTML report).
+| Stage  | Job                     | What it does                                                                  |
+| ------ | ----------------------- | ----------------------------------------------------------------------------- |
+| build  | `build-job`             | `npm ci`, then typecheck, ESLint, Prettier and the test-ID check              |
+| test   | `api-test-job`          | API tests                                                                     |
+| test   | `e2e-test-job` 1/2, 2/2 | Browser tests, split across 2 parallel jobs                                   |
+| deploy | `report-job`            | Merges all results into one HTML report (every pipeline, even after failures) |
+| deploy | `pages`                 | Publishes that report to GitLab Pages (default branch only)                   |
 
-- JUnit results show in the merge request widget.
-- The merged HTML report is exposed as the **Playwright report** artifact.
-- Optional CI/CD variables: `BASE_URL`, `API_URL`, and `TEST_GREP` (for example `@smoke`).
+- JUnit results show in the pipeline's **Tests** tab and in the merge request widget.
+- The merged HTML report is a job artifact (**Playwright report** link in MRs).
+- On `main`, the latest report is also published at `https://<username>.gitlab.io/qa-auto-workshop/` (see
+  **Deploy → Pages** for the exact URL, and **Operate → Environments → test-report**).
+- Optional CI/CD variables: `BASE_URL`, `API_URL`, and `TEST_GREP` (for example `@smoke` or `TC-012`).
 - Set up a pipeline schedule for a nightly full run.
 - Keep the Docker image tag in sync with `@playwright/test` when upgrading.
