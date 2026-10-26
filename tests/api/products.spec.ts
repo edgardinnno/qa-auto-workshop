@@ -1,6 +1,6 @@
 import { expect, test } from '../../src/fixtures';
 import type { Product, ProductList } from '../../src/api/types';
-import { CATEGORIES, PRODUCTS, type SortOption } from '../../src/data/constants';
+import { CATEGORIES, PRODUCTS, type Category, type SortOption } from '../../src/data/constants';
 import { expectApiError, parseOk } from '../../src/utils/api-assertions';
 import { expectSchema } from '../../src/utils/schema';
 
@@ -17,7 +17,7 @@ const SORT_CHECKS: Record<SortOption, (a: Product, b: Product) => boolean> = {
 };
 
 test.describe('Products', { tag: '@api' }, () => {
-  test('lists products with pagination metadata', { tag: '@smoke' }, async ({ api }) => {
+  test('TC-071: lists products with pagination metadata', { tag: '@smoke' }, async ({ api }) => {
     const body = await parseOk<ProductList>(await api.products.list());
 
     expect(body.page).toBe(1);
@@ -28,7 +28,7 @@ test.describe('Products', { tag: '@api' }, () => {
     for (const product of body.items) expectSchema(product, 'Product');
   });
 
-  test('paginates without overlap and covers every product', async ({ api }) => {
+  test('TC-072: paginates without overlap and covers every product', async ({ api }) => {
     const first = await parseOk<ProductList>(await api.products.list({ limit: 8, page: 1 }));
     const pages = [first];
     for (let page = 2; page <= first.pages; page++) {
@@ -40,23 +40,41 @@ test.describe('Products', { tag: '@api' }, () => {
     expect(ids).toHaveLength(first.total);
   });
 
-  test('page beyond the last one returns an empty list', async ({ api }) => {
+  test('TC-073: page beyond the last one returns an empty list', async ({ api }) => {
     const body = await parseOk<ProductList>(await api.products.list({ page: 999 }));
 
     expect(body.items).toEqual([]);
   });
 
-  for (const [sort, inOrder] of Object.entries(SORT_CHECKS) as [SortOption, (a: Product, b: Product) => boolean][]) {
-    test(`sorts by ${sort}`, async ({ api }) => {
+  const sortCases: { id: string; sort: SortOption }[] = [
+    { id: 'TC-074', sort: 'popular' },
+    { id: 'TC-075', sort: 'price-asc' },
+    { id: 'TC-076', sort: 'price-desc' },
+    { id: 'TC-077', sort: 'name-asc' },
+    { id: 'TC-078', sort: 'name-desc' },
+    { id: 'TC-079', sort: 'rating' },
+  ];
+
+  for (const { id, sort } of sortCases) {
+    test(`${id}: sorts by ${sort}`, async ({ api }) => {
       const { items } = await parseOk<ProductList>(await api.products.list({ sort, limit: 50 }));
 
+      const inOrder = SORT_CHECKS[sort];
       const outOfOrder = items.slice(1).filter((item, i) => !inOrder(items[i], item));
       expect(outOfOrder, `items out of order for sort=${sort}`).toEqual([]);
     });
   }
 
-  for (const category of Object.keys(CATEGORIES)) {
-    test(`filters by category "${category}"`, async ({ api }) => {
+  const categoryCases: { id: string; category: Category }[] = [
+    { id: 'TC-080', category: 'elektronika' },
+    { id: 'TC-081', category: 'drabuziai' },
+    { id: 'TC-082', category: 'namai' },
+    { id: 'TC-083', category: 'sportas' },
+    { id: 'TC-084', category: 'knygos' },
+  ];
+
+  for (const { id, category } of categoryCases) {
+    test(`${id}: filters by category "${category}"`, async ({ api }) => {
       const { items } = await parseOk<ProductList>(await api.products.list({ category, limit: 50 }));
 
       expect(items.length).toBeGreaterThan(0);
@@ -64,7 +82,7 @@ test.describe('Products', { tag: '@api' }, () => {
     });
   }
 
-  test('inStock=true hides sold-out products', async ({ api }) => {
+  test('TC-085: inStock=true hides sold-out products', async ({ api }) => {
     const all = await parseOk<ProductList>(await api.products.list({ limit: 50 }));
     const inStock = await parseOk<ProductList>(await api.products.list({ inStock: true, limit: 50 }));
 
@@ -73,46 +91,46 @@ test.describe('Products', { tag: '@api' }, () => {
     expect(inStock.total).toBe(all.items.filter((p) => p.stock > 0).length);
   });
 
-  test('search ignores Lithuanian diacritics', async ({ api }) => {
+  test('TC-086: search ignores Lithuanian diacritics', async ({ api }) => {
     const { items } = await parseOk<ProductList>(await api.products.list({ q: 'sviesa' }));
 
     expect(items.map((p) => p.name)).toContain(PRODUCTS.lamp.name);
   });
 
-  test('search with no matches returns total 0', async ({ api }) => {
+  test('TC-087: search with no matches returns total 0', async ({ api }) => {
     const body = await parseOk<ProductList>(await api.products.list({ q: 'zzz-no-such-product' }));
 
     expect(body).toMatchObject({ items: [], total: 0 });
   });
 
-  const invalidQueries: { name: string; query: Record<string, string | number>; field: string }[] = [
-    { name: 'limit=0', query: { limit: 0 }, field: 'limit' },
-    { name: 'limit=51', query: { limit: 51 }, field: 'limit' },
-    { name: 'page=0', query: { page: 0 }, field: 'page' },
-    { name: 'page=abc', query: { page: 'abc' }, field: 'page' },
-    { name: 'unknown sort', query: { sort: 'cheapest' }, field: 'sort' },
-    { name: 'unknown category', query: { category: 'auto' }, field: 'category' },
-    { name: 'search longer than 100 chars', query: { q: 'a'.repeat(101) }, field: 'q' },
+  const invalidQueries: { id: string; name: string; query: Record<string, string | number>; field: string }[] = [
+    { id: 'TC-088', name: 'limit=0', query: { limit: 0 }, field: 'limit' },
+    { id: 'TC-089', name: 'limit=51', query: { limit: 51 }, field: 'limit' },
+    { id: 'TC-090', name: 'page=0', query: { page: 0 }, field: 'page' },
+    { id: 'TC-091', name: 'page=abc', query: { page: 'abc' }, field: 'page' },
+    { id: 'TC-092', name: 'unknown sort', query: { sort: 'cheapest' }, field: 'sort' },
+    { id: 'TC-093', name: 'unknown category', query: { category: 'auto' }, field: 'category' },
+    { id: 'TC-094', name: 'search longer than 100 chars', query: { q: 'a'.repeat(101) }, field: 'q' },
   ];
 
-  for (const { name, query, field } of invalidQueries) {
-    test(`rejects invalid query: ${name}`, async ({ api }) => {
+  for (const { id, name, query, field } of invalidQueries) {
+    test(`${id}: rejects invalid query: ${name}`, async ({ api }) => {
       await expectApiError(await api.products.list(query), 422, 'VALIDATION_ERROR', { [field]: /.+/ });
     });
   }
 
-  test('returns a single product by id', async ({ api }) => {
+  test('TC-095: returns a single product by id', async ({ api }) => {
     const { product } = await parseOk<{ product: Product }>(await api.products.get(PRODUCTS.mug.id));
 
     expectSchema(product, 'Product');
     expect(product).toMatchObject({ id: PRODUCTS.mug.id, name: PRODUCTS.mug.name, price: PRODUCTS.mug.price });
   });
 
-  test('unknown product id returns 404', async ({ api }) => {
+  test('TC-096: unknown product id returns 404', async ({ api }) => {
     await expectApiError(await api.products.get('p999'), 404, 'PRODUCT_NOT_FOUND');
   });
 
-  test('categories include product counts that match the catalogue', async ({ api }) => {
+  test('TC-097: categories include product counts that match the catalogue', async ({ api }) => {
     const { items } = await parseOk<{ items: { id: string; productCount: number }[] }>(await api.products.categories());
     const { total } = await parseOk<ProductList>(await api.products.list());
 

@@ -5,7 +5,7 @@ import { PRODUCTS } from '../../src/data/constants';
 test.use({ cookieConsent: false });
 
 test.describe('Cookie banner', { tag: '@e2e' }, () => {
-  test('appears shortly after load and remembers the choice', async ({ catalogPage, cookieBanner, page }) => {
+  test('TC-242: appears shortly after load and remembers the choice', async ({ catalogPage, cookieBanner, page }) => {
     await catalogPage.goto();
     await expect(cookieBanner.root).toBeVisible();
 
@@ -18,7 +18,7 @@ test.describe('Cookie banner', { tag: '@e2e' }, () => {
     await expect(cookieBanner.root).toBeHidden();
   });
 
-  test('"necessary only" is stored as a separate choice', async ({ catalogPage, cookieBanner, page }) => {
+  test('TC-243: "necessary only" is stored as a separate choice', async ({ catalogPage, cookieBanner, page }) => {
     await catalogPage.goto();
 
     await cookieBanner.necessaryOnlyButton.click();
@@ -26,7 +26,7 @@ test.describe('Cookie banner', { tag: '@e2e' }, () => {
     expect(await page.evaluate(() => localStorage.getItem('qa_cookie_consent'))).toBe('necessary');
   });
 
-  test('addLocatorHandler dismisses the banner whenever it gets in the way', async ({
+  test('TC-244: addLocatorHandler dismisses the banner whenever it gets in the way', async ({
     productPage,
     cookieBanner,
     page,

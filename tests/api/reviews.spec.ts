@@ -9,14 +9,14 @@ const PRODUCT_ID = PRODUCTS.mug.id;
 const REVIEW_TEXT = 'Automatinio testo atsiliepimas: puikus puodelis.';
 
 test.describe('Reviews', { tag: '@api' }, () => {
-  test('lists reviews of a product', async ({ api }) => {
+  test('TC-152: lists reviews of a product', async ({ api }) => {
     const { items, total } = await parseOk<{ items: Review[]; total: number }>(await api.reviews.list(PRODUCT_ID));
 
     expect(total).toBe(items.length);
     for (const review of items) expectSchema(review, 'Review');
   });
 
-  test('a user can post one review, shown with first name + initial', async ({ testUser }) => {
+  test('TC-153: a user can post one review, shown with first name + initial', async ({ testUser }) => {
     const { review } = await parseOk<{ review: Review }>(
       await testUser.api.reviews.create(PRODUCT_ID, 5, REVIEW_TEXT),
       201,
@@ -34,27 +34,27 @@ test.describe('Reviews', { tag: '@api' }, () => {
     expect(items.map((r) => r.id)).toContain(review.id);
   });
 
-  test('a second review of the same product → 409', async ({ testUser }) => {
+  test('TC-154: a second review of the same product → 409', async ({ testUser }) => {
     await parseOk(await testUser.api.reviews.create(PRODUCT_ID, 4, REVIEW_TEXT), 201);
 
     await expectApiError(await testUser.api.reviews.create(PRODUCT_ID, 3, REVIEW_TEXT), 409, 'REVIEW_EXISTS');
   });
 
-  const invalidReviews: { name: string; rating: number; text: string; field: string }[] = [
-    { name: 'rating above 5', rating: 6, text: REVIEW_TEXT, field: 'rating' },
-    { name: 'rating below 1', rating: 0, text: REVIEW_TEXT, field: 'rating' },
-    { name: 'text shorter than 10 chars', rating: 5, text: 'Gerai', field: 'text' },
+  const invalidReviews: { id: string; name: string; rating: number; text: string; field: string }[] = [
+    { id: 'TC-155', name: 'rating above 5', rating: 6, text: REVIEW_TEXT, field: 'rating' },
+    { id: 'TC-156', name: 'rating below 1', rating: 0, text: REVIEW_TEXT, field: 'rating' },
+    { id: 'TC-157', name: 'text shorter than 10 chars', rating: 5, text: 'Gerai', field: 'text' },
   ];
 
-  for (const { name, rating, text, field } of invalidReviews) {
-    test(`rejects review: ${name}`, async ({ testUser }) => {
+  for (const { id, name, rating, text, field } of invalidReviews) {
+    test(`${id}: rejects review: ${name}`, async ({ testUser }) => {
       await expectApiError(await testUser.api.reviews.create(PRODUCT_ID, rating, text), 422, 'VALIDATION_ERROR', {
         [field]: /.+/,
       });
     });
   }
 
-  test('reviewing an unknown product → 404', async ({ testUser }) => {
+  test('TC-158: reviewing an unknown product → 404', async ({ testUser }) => {
     await expectApiError(await testUser.api.reviews.create('p999', 5, REVIEW_TEXT), 404, 'PRODUCT_NOT_FOUND');
   });
 });

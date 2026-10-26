@@ -5,20 +5,26 @@ import { expectApiError, parseOk } from '../../src/utils/api-assertions';
 import { expectSchema } from '../../src/utils/schema';
 
 test.describe('Promo codes — guest validation', { tag: '@api' }, () => {
-  const validCases: { code: string; subtotal: number; expected: Partial<Promo> }[] = [
-    { code: PROMO_CODES.percent10, subtotal: 10, expected: { code: 'PLAYWRIGHT10', type: 'percent', value: 10 } },
+  const validCases: { id: string; code: string; subtotal: number; expected: Partial<Promo> }[] = [
     {
+      id: 'TC-098',
+      code: PROMO_CODES.percent10,
+      subtotal: 10,
+      expected: { code: 'PLAYWRIGHT10', type: 'percent', value: 10 },
+    },
+    {
+      id: 'TC-099',
       code: PROMO_CODES.percent20Min100,
       subtotal: 100,
       expected: { code: 'DIDELIS20', type: 'percent', value: 20, min: 100 },
     },
-    { code: PROMO_CODES.freeShipping, subtotal: 0, expected: { code: 'NEMOKAMAS', type: 'shipping' } },
-    { code: 'playwright10', subtotal: 10, expected: { code: 'PLAYWRIGHT10' } },
-    { code: '  nemokamas  ', subtotal: 10, expected: { code: 'NEMOKAMAS' } },
+    { id: 'TC-100', code: PROMO_CODES.freeShipping, subtotal: 0, expected: { code: 'NEMOKAMAS', type: 'shipping' } },
+    { id: 'TC-101', code: 'playwright10', subtotal: 10, expected: { code: 'PLAYWRIGHT10' } },
+    { id: 'TC-102', code: '  nemokamas  ', subtotal: 10, expected: { code: 'NEMOKAMAS' } },
   ];
 
-  for (const { code, subtotal, expected } of validCases) {
-    test(`accepts "${code}" for subtotal ${subtotal}`, async ({ api }) => {
+  for (const { id, code, subtotal, expected } of validCases) {
+    test(`${id}: accepts "${code}" for subtotal ${subtotal}`, async ({ api }) => {
       const { promo } = await parseOk<{ promo: Promo }>(await api.misc.validatePromo(code, subtotal));
 
       expectSchema(promo, 'Promo');
@@ -26,18 +32,34 @@ test.describe('Promo codes — guest validation', { tag: '@api' }, () => {
     });
   }
 
-  const invalidCases: { name: string; code: string; subtotal?: number; status: number; errorCode: string }[] = [
-    { name: 'unknown code', code: 'NERA', subtotal: 10, status: 404, errorCode: 'PROMO_NOT_FOUND' },
-    { name: 'expired code', code: PROMO_CODES.expired, subtotal: 10, status: 410, errorCode: 'PROMO_EXPIRED' },
+  const invalidCases: {
+    id: string;
+    name: string;
+    code: string;
+    subtotal?: number;
+    status: number;
+    errorCode: string;
+  }[] = [
+    { id: 'TC-103', name: 'unknown code', code: 'NERA', subtotal: 10, status: 404, errorCode: 'PROMO_NOT_FOUND' },
     {
+      id: 'TC-104',
+      name: 'expired code',
+      code: PROMO_CODES.expired,
+      subtotal: 10,
+      status: 410,
+      errorCode: 'PROMO_EXPIRED',
+    },
+    {
+      id: 'TC-105',
       name: 'below minimum amount',
       code: PROMO_CODES.percent20Min100,
       subtotal: 99.99,
       status: 422,
       errorCode: 'PROMO_MIN_AMOUNT',
     },
-    { name: 'empty code', code: '', subtotal: 10, status: 422, errorCode: 'VALIDATION_ERROR' },
+    { id: 'TC-106', name: 'empty code', code: '', subtotal: 10, status: 422, errorCode: 'VALIDATION_ERROR' },
     {
+      id: 'TC-107',
       name: 'negative subtotal',
       code: PROMO_CODES.percent10,
       subtotal: -1,
@@ -46,8 +68,8 @@ test.describe('Promo codes — guest validation', { tag: '@api' }, () => {
     },
   ];
 
-  for (const { name, code, subtotal, status, errorCode } of invalidCases) {
-    test(`rejects: ${name}`, async ({ api }) => {
+  for (const { id, name, code, subtotal, status, errorCode } of invalidCases) {
+    test(`${id}: rejects: ${name}`, async ({ api }) => {
       await expectApiError(await api.misc.validatePromo(code, subtotal), status, errorCode);
     });
   }

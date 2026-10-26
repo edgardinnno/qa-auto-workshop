@@ -12,7 +12,7 @@ test.describe('Cart', { tag: '@e2e' }, () => {
     await cartPage.goto();
   });
 
-  test('shows the items and totals from the server', { tag: '@smoke' }, async ({ cartPage }) => {
+  test('TC-208: shows the items and totals from the server', { tag: '@smoke' }, async ({ cartPage }) => {
     await expect(cartPage.items).toHaveCount(2);
     await expect(cartPage.itemsCount).toHaveText('2 prekės');
     await expect(cartPage.subtotal).toHaveText('44,89 €');
@@ -21,7 +21,7 @@ test.describe('Cart', { tag: '@e2e' }, () => {
     await expect(cartPage.freeShippingLeft).toHaveText('5,11 €');
   });
 
-  test('increasing a quantity updates the line and unlocks free shipping', async ({ cartPage }) => {
+  test('TC-209: increasing a quantity updates the line and unlocks free shipping', async ({ cartPage }) => {
     await cartPage.increaseQuantity(mug.name);
 
     await expect(cartPage.quantityInput(mug.name)).toHaveValue('2');
@@ -30,7 +30,7 @@ test.describe('Cart', { tag: '@e2e' }, () => {
     await expect(cartPage.freeShipping).toHaveAttribute('data-state', 'free');
   });
 
-  test('typing a quantity is saved to the server', async ({ cartPage, loggedInUser }) => {
+  test('TC-210: typing a quantity is saved to the server', async ({ cartPage, loggedInUser }) => {
     await cartPage.setQuantity(mug.name, 4);
 
     await expect(cartPage.itemTotal(mug.name)).toHaveText('39,96 €');
@@ -42,7 +42,7 @@ test.describe('Cart', { tag: '@e2e' }, () => {
       .toBe(4);
   });
 
-  test('removing an item asks for confirmation', async ({ cartPage }) => {
+  test('TC-211: removing an item asks for confirmation', async ({ cartPage }) => {
     await cartPage.clickRemove(mug.name);
     await expect(cartPage.confirmDialog.message).toContainText(mug.name);
 
@@ -54,7 +54,7 @@ test.describe('Cart', { tag: '@e2e' }, () => {
     await expect(cartPage.item(mug.name)).toHaveCount(0);
   });
 
-  test('"clear cart" uses the native confirm dialog', async ({ cartPage }) => {
+  test('TC-212: "clear cart" uses the native confirm dialog', async ({ cartPage }) => {
     await cartPage.clearCart({ accept: false });
     await expect(cartPage.items).toHaveCount(2);
 
@@ -63,7 +63,7 @@ test.describe('Cart', { tag: '@e2e' }, () => {
     await expect(cartPage.header.cartBadge).toBeHidden();
   });
 
-  test('applies and removes a promo code', async ({ cartPage }) => {
+  test('TC-213: applies and removes a promo code', async ({ cartPage }) => {
     await cartPage.applyPromo(PROMO_CODES.percent10.toLowerCase());
 
     await expect(cartPage.appliedPromoCode).toHaveText(PROMO_CODES.percent10);
@@ -75,14 +75,14 @@ test.describe('Cart', { tag: '@e2e' }, () => {
     await expect(cartPage.total).toHaveText('49,88 €');
   });
 
-  const rejectedCodes: { code: string; message: string }[] = [
-    { code: PROMO_CODES.expired, message: 'Šio nuolaidos kodo galiojimas pasibaigęs.' },
-    { code: 'NERA', message: 'Toks nuolaidos kodas neegzistuoja.' },
-    { code: PROMO_CODES.percent20Min100, message: 'Kodas galioja užsakymams nuo 100,00 €.' },
+  const rejectedCodes: { id: string; code: string; message: string }[] = [
+    { id: 'TC-214', code: PROMO_CODES.expired, message: 'Šio nuolaidos kodo galiojimas pasibaigęs.' },
+    { id: 'TC-215', code: 'NERA', message: 'Toks nuolaidos kodas neegzistuoja.' },
+    { id: 'TC-216', code: PROMO_CODES.percent20Min100, message: 'Kodas galioja užsakymams nuo 100,00 €.' },
   ];
 
-  for (const { code, message } of rejectedCodes) {
-    test(`rejects promo code ${code}`, async ({ cartPage }) => {
+  for (const { id, code, message } of rejectedCodes) {
+    test(`${id}: rejects promo code ${code}`, async ({ cartPage }) => {
       await cartPage.applyPromo(code);
 
       await expect(cartPage.promoError).toHaveText(message);
@@ -92,7 +92,7 @@ test.describe('Cart', { tag: '@e2e' }, () => {
 });
 
 test.describe('Cart — guest', { tag: '@e2e' }, () => {
-  test('an empty cart shows a call to action', async ({ cartPage }) => {
+  test('TC-217: an empty cart shows a call to action', async ({ cartPage }) => {
     await cartPage.goto();
 
     await expect(cartPage.emptyState).toBeVisible();
@@ -102,7 +102,12 @@ test.describe('Cart — guest', { tag: '@e2e' }, () => {
     );
   });
 
-  test('the guest cart is merged into the account on login', async ({ catalogPage, loginPage, cartPage, testUser }) => {
+  test('TC-218: the guest cart is merged into the account on login', async ({
+    catalogPage,
+    loginPage,
+    cartPage,
+    testUser,
+  }) => {
     await catalogPage.goto();
     await catalogPage.search(mug.name);
     await catalogPage.productCard(mug.name).addToCart();

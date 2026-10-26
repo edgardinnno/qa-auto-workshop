@@ -13,7 +13,7 @@ test.describe('Checkout', { tag: '@e2e' }, () => {
   });
 
   test(
-    'a user completes a card purchase and sees the order in their account',
+    'TC-219: a user completes a card purchase and sees the order in their account',
     { tag: '@smoke' },
     async ({ cartPage, checkoutPage, orderPage, accountPage, loggedInUser, page }) => {
       await test.step('go from the cart to checkout', async () => {
@@ -65,7 +65,7 @@ test.describe('Checkout', { tag: '@e2e' }, () => {
     },
   );
 
-  test('a declined card shows the payment error and keeps the cart', async ({ checkoutPage, loggedInUser }) => {
+  test('TC-220: a declined card shows the payment error and keeps the cart', async ({ checkoutPage, loggedInUser }) => {
     await checkoutPage.goto();
     await checkoutPage.fillAddress(buildAddress());
     await checkoutPage.next();
@@ -81,7 +81,7 @@ test.describe('Checkout', { tag: '@e2e' }, () => {
     expect(cart.items).toHaveLength(1);
   });
 
-  test('an invalid card number is caught before submitting', async ({ checkoutPage }) => {
+  test('TC-221: an invalid card number is caught before submitting', async ({ checkoutPage }) => {
     await checkoutPage.goto();
     await checkoutPage.fillAddress(buildAddress());
     await checkoutPage.next();
@@ -94,7 +94,7 @@ test.describe('Checkout', { tag: '@e2e' }, () => {
     await expect(checkoutPage.step(3)).toHaveAttribute('aria-current', 'step');
   });
 
-  test('address step validates required fields and formats', async ({ checkoutPage }) => {
+  test('TC-222: address step validates required fields and formats', async ({ checkoutPage }) => {
     await checkoutPage.goto();
     await checkoutPage.fillAddress(buildAddress({ phone: '860000000', street: 'Kt', city: '', postal: '123' }));
 
@@ -107,7 +107,7 @@ test.describe('Checkout', { tag: '@e2e' }, () => {
     await expect(checkoutPage.step(1)).toHaveAttribute('aria-current', 'step');
   });
 
-  test('parcel locker: cheaper shipping, cash payment disabled', async ({ checkoutPage }) => {
+  test('TC-223: parcel locker: cheaper shipping, cash payment disabled', async ({ checkoutPage }) => {
     await checkoutPage.goto();
     await checkoutPage.fillAddress(buildAddress());
     await checkoutPage.next();
@@ -121,7 +121,7 @@ test.describe('Checkout', { tag: '@e2e' }, () => {
     await expect(checkoutPage.cashUnavailableNote).toBeVisible();
   });
 
-  test('pickup in store is free', async ({ checkoutPage }) => {
+  test('TC-224: pickup in store is free', async ({ checkoutPage }) => {
     await checkoutPage.goto();
     await checkoutPage.fillAddress(buildAddress());
     await checkoutPage.next();
@@ -134,7 +134,7 @@ test.describe('Checkout', { tag: '@e2e' }, () => {
 });
 
 test.describe('Checkout — access', { tag: '@e2e' }, () => {
-  test('a guest is sent to login when proceeding to checkout', async ({ productPage, cartPage, page }) => {
+  test('TC-225: a guest is sent to login when proceeding to checkout', async ({ productPage, cartPage, page }) => {
     await productPage.open(PRODUCTS.mug.id);
     await productPage.addToCart();
     await cartPage.goto();
@@ -144,7 +144,7 @@ test.describe('Checkout — access', { tag: '@e2e' }, () => {
     await expect(page).toHaveURL(/login\.html\?redirect=checkout\.html/);
   });
 
-  test('an empty cart redirects from checkout back to the cart', async ({ loggedInUser, page }) => {
+  test('TC-226: an empty cart redirects from checkout back to the cart', async ({ loggedInUser, page }) => {
     expect(loggedInUser.user.id).toBeTruthy();
 
     await page.goto('checkout.html');

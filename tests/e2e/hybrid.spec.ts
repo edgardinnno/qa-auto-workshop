@@ -6,7 +6,7 @@ import { parseOk } from '../../src/utils/api-assertions';
 
 /** Arrange through the API, act and assert in the UI (and the other way round). */
 test.describe('API + UI', { tag: '@e2e' }, () => {
-  test('an order created through the API is shown in the account and on its page', async ({
+  test('TC-245: an order created through the API is shown in the account and on its page', async ({
     loggedInUser,
     accountPage,
     orderPage,
@@ -28,7 +28,7 @@ test.describe('API + UI', { tag: '@e2e' }, () => {
     await expect(orderPage.successBanner).toBeHidden();
   });
 
-  test('cancelling in the UI is reflected by the API', async ({ loggedInUser, orderPage }) => {
+  test('TC-246: cancelling in the UI is reflected by the API', async ({ loggedInUser, orderPage }) => {
     await parseOk(await loggedInUser.api.cart.addItem({ productId: PRODUCTS.mug.id }), 201);
     const { order } = await parseOk<{ order: Order }>(await loggedInUser.api.orders.create(buildOrderRequest()), 201);
 
@@ -41,7 +41,7 @@ test.describe('API + UI', { tag: '@e2e' }, () => {
     expect(reloaded.status).toBe('cancelled');
   });
 
-  test("another user's order is not visible", async ({ createUser, loggedInUser, orderPage }) => {
+  test("TC-247: another user's order is not visible", async ({ createUser, loggedInUser, orderPage }) => {
     const other = await createUser();
     await parseOk(await other.api.cart.addItem({ productId: PRODUCTS.mug.id }), 201);
     const { order } = await parseOk<{ order: Order }>(await other.api.orders.create(buildOrderRequest()), 201);
@@ -52,12 +52,14 @@ test.describe('API + UI', { tag: '@e2e' }, () => {
     await expect(orderPage.notFound).toBeVisible();
   });
 
-  test('a revoked session sends the user back to login', async ({ loggedInUser, accountPage, loginPage, page }) => {
-    await accountPage.open('profile');
-    await expect(accountPage.greeting).toBeVisible();
+  test('TC-248: a revoked session sends the user back to login', async ({ loggedInUser, loginPage, page }) => {
+    // Revoke the token before any page is open: with an account page already loaded, its in-flight
+    // API calls would hit the 401 and redirect mid-navigation, making the test racy.
+    expect((await loggedInUser.api.auth.logout()).status()).toBe(204);
 
-    await loggedInUser.api.auth.logout();
-    await page.reload();
+    // The browser still holds the (now invalid) session cookie; the app's first API call gets a 401.
+    // Wait only for the commit: the redirect to login can fire before the "load" event.
+    await page.goto('account.html', { waitUntil: 'commit' });
 
     await expect(page).toHaveURL(/login\.html\?redirect=account\.html/);
     await expect(loginPage.toast.withText('Sesija baigėsi. Prisijunkite iš naujo.')).toBeVisible();

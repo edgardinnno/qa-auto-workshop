@@ -4,7 +4,7 @@ import { PRODUCTS } from '../../src/data/constants';
 import { parseOk } from '../../src/utils/api-assertions';
 
 test.describe('Product page', { tag: '@e2e' }, () => {
-  test('shows the product as returned by the API', async ({ productPage, api, page }) => {
+  test('TC-200: shows the product as returned by the API', async ({ productPage, api, page }) => {
     const { product } = await parseOk<{ product: Product }>(await api.products.get(PRODUCTS.mug.id));
 
     await productPage.open(product.id);
@@ -15,7 +15,7 @@ test.describe('Product page', { tag: '@e2e' }, () => {
     await expect(page).toHaveTitle(`${product.name} | QA Turgus`);
   });
 
-  test('tabs switch between description and specifications', async ({ productPage }) => {
+  test('TC-201: tabs switch between description and specifications', async ({ productPage }) => {
     await productPage.open(PRODUCTS.mug.id);
 
     await productPage.tab('Specifikacijos').click();
@@ -25,7 +25,7 @@ test.describe('Product page', { tag: '@e2e' }, () => {
     await expect(productPage.page.getByTestId('panel-description')).toBeHidden();
   });
 
-  test('a guest adds a product and the header badge updates', { tag: '@smoke' }, async ({ productPage }) => {
+  test('TC-202: a guest adds a product and the header badge updates', { tag: '@smoke' }, async ({ productPage }) => {
     await productPage.open(PRODUCTS.mug.id);
 
     await productPage.setQuantity(3);
@@ -36,7 +36,7 @@ test.describe('Product page', { tag: '@e2e' }, () => {
     await expect(productPage.quantityInput).toHaveValue('1');
   });
 
-  test('a logged-in user adds to the server-side cart', async ({ productPage, loggedInUser, page }) => {
+  test('TC-203: a logged-in user adds to the server-side cart', async ({ productPage, loggedInUser, page }) => {
     await productPage.open(PRODUCTS.headphones.id);
     await productPage.chooseColor(PRODUCTS.headphones.colors[1]);
     await expect(productPage.selectedColor).toHaveText(PRODUCTS.headphones.colors[1]);
@@ -57,7 +57,7 @@ test.describe('Product page', { tag: '@e2e' }, () => {
     expect(cart.items[0].color).toBe(PRODUCTS.headphones.colors[1]);
   });
 
-  test('a size must be chosen for clothing', async ({ productPage }) => {
+  test('TC-204: a size must be chosen for clothing', async ({ productPage }) => {
     await productPage.open(PRODUCTS.tShirt.id);
 
     await productPage.addToCart();
@@ -70,7 +70,7 @@ test.describe('Product page', { tag: '@e2e' }, () => {
     await expect(productPage.header.cartBadge).toHaveText('1');
   });
 
-  test('quantity cannot exceed the stock', async ({ productPage }) => {
+  test('TC-205: quantity cannot exceed the stock', async ({ productPage }) => {
     await productPage.open(PRODUCTS.keyboard.id);
     await expect(productPage.stockStatus).toHaveText(`Liko tik ${PRODUCTS.keyboard.stock} vnt.!`);
 
@@ -80,7 +80,7 @@ test.describe('Product page', { tag: '@e2e' }, () => {
     await expect(productPage.quantityError).toHaveText(`Maksimalus galimas kiekis – ${PRODUCTS.keyboard.stock} vnt.`);
   });
 
-  test('a sold-out product cannot be added', async ({ productPage }) => {
+  test('TC-206: a sold-out product cannot be added', async ({ productPage }) => {
     await productPage.open(PRODUCTS.speaker.id);
 
     await expect(productPage.stockStatus).toHaveText('Išparduota');
@@ -88,7 +88,7 @@ test.describe('Product page', { tag: '@e2e' }, () => {
     await expect(productPage.quantityInput).toBeDisabled();
   });
 
-  test('an unknown product id shows "not found"', async ({ productPage }) => {
+  test('TC-207: an unknown product id shows "not found"', async ({ productPage }) => {
     await productPage.open('p999');
 
     await expect(productPage.notFound).toBeVisible();

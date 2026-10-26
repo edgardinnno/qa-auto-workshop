@@ -9,7 +9,7 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
   });
 
   test(
-    'shows the first page of products with a total that matches the API',
+    'TC-187: shows the first page of products with a total that matches the API',
     { tag: '@smoke' },
     async ({ catalogPage, api }) => {
       const { total } = await parseOk<ProductList>(await api.products.list());
@@ -20,14 +20,14 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
     },
   );
 
-  test('searches by name, ignoring diacritics', async ({ catalogPage, page }) => {
+  test('TC-188: searches by name, ignoring diacritics', async ({ catalogPage, page }) => {
     await catalogPage.search('sviesa');
 
     await expect(catalogPage.productNames).toHaveText([PRODUCTS.lamp.name]);
     await expect(page).toHaveURL(/\?q=sviesa$/);
   });
 
-  test('a search with no results shows the empty state, which can be reset', async ({ catalogPage }) => {
+  test('TC-189: a search with no results shows the empty state, which can be reset', async ({ catalogPage }) => {
     await catalogPage.search('nėra-tokios-prekės');
     await expect(catalogPage.emptyState).toBeVisible();
     await expect(catalogPage.productCards).toHaveCount(0);
@@ -39,7 +39,7 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
     await expect(catalogPage.productCards).toHaveCount(8);
   });
 
-  test('filters by category', async ({ catalogPage, api }) => {
+  test('TC-190: filters by category', async ({ catalogPage, api }) => {
     const { items } = await parseOk<ProductList>(await api.products.list({ category: 'knygos', limit: 50 }));
 
     await catalogPage.filterByCategory('knygos');
@@ -48,7 +48,7 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
     await expect(catalogPage.page).toHaveURL(/cat=knygos/);
   });
 
-  test('a category tile applies the same filter', async ({ catalogPage, page }) => {
+  test('TC-191: a category tile applies the same filter', async ({ catalogPage, page }) => {
     await catalogPage.page.getByTestId('category-tile-namai').click();
 
     await expect(catalogPage.categorySelect).toHaveValue('namai');
@@ -56,7 +56,7 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
     await expect(catalogPage.productCards.first()).toContainText(CATEGORIES.namai);
   });
 
-  test('sorts by price ascending and descending', async ({ catalogPage }) => {
+  test('TC-192: sorts by price ascending and descending', async ({ catalogPage }) => {
     await catalogPage.sortBy('price-asc');
     const ascending = await catalogPage.priceValues();
     expect(ascending).toEqual([...ascending].sort((a, b) => a - b));
@@ -66,7 +66,7 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
     expect(descending).toEqual([...descending].sort((a, b) => b - a));
   });
 
-  test('"only in stock" hides sold-out products', async ({ catalogPage }) => {
+  test('TC-193: "only in stock" hides sold-out products', async ({ catalogPage }) => {
     await catalogPage.filterByCategory('elektronika');
     await expect(catalogPage.productCard(PRODUCTS.speaker.name).stockBadge).toHaveText('Išparduota');
 
@@ -76,7 +76,7 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
     await expect(catalogPage.page).toHaveURL(/stock=1/);
   });
 
-  test('paginates through the results', async ({ catalogPage }) => {
+  test('TC-194: paginates through the results', async ({ catalogPage }) => {
     const firstPage = await catalogPage.productNames.allTextContents();
     await expect(catalogPage.previousPageButton).toBeDisabled();
 
@@ -87,7 +87,7 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
     await expect(catalogPage.page).toHaveURL(/page=2/);
   });
 
-  test('filters are restored from the URL', async ({ catalogPage }) => {
+  test('TC-195: filters are restored from the URL', async ({ catalogPage }) => {
     await catalogPage.goto('?cat=sportas&sort=price-asc&stock=1');
 
     await expect(catalogPage.categorySelect).toHaveValue('sportas');
@@ -95,7 +95,7 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
     await expect(catalogPage.inStockCheckbox).toBeChecked();
   });
 
-  test('a sold-out product has a disabled button, a sized one links to options', async ({ catalogPage }) => {
+  test('TC-196: a sold-out product has a disabled button, a sized one links to options', async ({ catalogPage }) => {
     await catalogPage.search(PRODUCTS.speaker.name);
     await expect(catalogPage.productCard(PRODUCTS.speaker.name).addToCartButton).toBeDisabled();
 
@@ -108,7 +108,7 @@ test.describe('Catalog', { tag: '@e2e' }, () => {
 });
 
 test.describe('Catalog — network mocking', { tag: '@e2e' }, () => {
-  test('server error shows a message, and "retry" recovers', async ({ catalogPage, page }) => {
+  test('TC-197: server error shows a message, and "retry" recovers', async ({ catalogPage, page }) => {
     let failNext = true;
     await page.route('**/api/products?*', async (route) => {
       if (failNext) {
@@ -133,7 +133,7 @@ test.describe('Catalog — network mocking', { tag: '@e2e' }, () => {
     await expect(catalogPage.productCards).toHaveCount(8);
   });
 
-  test('network failure shows the offline message', async ({ catalogPage, page }) => {
+  test('TC-198: network failure shows the offline message', async ({ catalogPage, page }) => {
     await page.route('**/api/products?*', (route) => route.abort('internetdisconnected'));
 
     await page.goto('index.html');
@@ -141,7 +141,7 @@ test.describe('Catalog — network mocking', { tag: '@e2e' }, () => {
     await expect(catalogPage.loadError).toContainText('Nepavyko susisiekti su serveriu');
   });
 
-  test('renders exactly what the API returns', async ({ catalogPage, page }) => {
+  test('TC-199: renders exactly what the API returns', async ({ catalogPage, page }) => {
     await page.route('**/api/products?*', (route) =>
       route.fulfill({
         json: {

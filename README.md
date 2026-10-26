@@ -25,7 +25,7 @@ npm run test:ui             # interactive UI mode
 npm run report              # open the last HTML report
 ```
 
-Code quality: `npm run typecheck`, `npm run lint`, `npm run format`.
+Code quality: `npm run typecheck`, `npm run lint`, `npm run format`, `npm run check:ids`.
 
 ## Project layout
 
@@ -83,6 +83,14 @@ contract checks against `src/api/openapi.json`. Refresh that file deliberately w
 - Mock the network with `page.route()` for states the real server can't produce on demand, such as errors or offline.
 - Tests must pass in any order and in parallel. Check this with `npx playwright test --repeat-each=3`.
 
+**Test IDs.** Every test name starts with a permanent ID: `TC-012: locked account cannot log in`.
+
+- A new test takes the next free number (`npm run check:ids` prints the highest one in use).
+- IDs are never renumbered or reused. When a test is deleted, its ID is retired.
+- Data-driven tests carry the ID in each data row (`{ id: 'TC-007', name: …}`), and the name is built as `` `${id}: …` ``.
+- Run one test by its ID: `npx playwright test -g "TC-012"`.
+- `npm run check:ids` (also part of the CI lint stage) fails on a missing or duplicate ID.
+
 **Tags.** Add `{ tag: '@smoke' }` to the critical paths. Every describe block also carries `@api` or `@e2e`.
 
 ### Adding a page object
@@ -103,7 +111,7 @@ contract checks against `src/api/openapi.json`. Refresh that file deliberately w
 
 `.gitlab-ci.yml` runs on merge requests, the default branch, schedules and manual runs:
 
-`lint` (typecheck, ESLint, Prettier) → `api-tests` + `e2e-tests` (2 shards) → `merge-reports` (single HTML report).
+`lint` (typecheck, ESLint, Prettier, test IDs) → `api-tests` + `e2e-tests` (2 shards) → `merge-reports` (single HTML report).
 
 - JUnit results show in the merge request widget.
 - The merged HTML report is exposed as the **Playwright report** artifact.

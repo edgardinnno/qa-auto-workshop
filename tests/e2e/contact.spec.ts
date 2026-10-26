@@ -16,25 +16,29 @@ test.describe('Contact form', { tag: '@e2e' }, () => {
     await contactPage.goto();
   });
 
-  test('sends a message with an attachment and shows the ticket number', { tag: '@smoke' }, async ({ contactPage }) => {
-    await contactPage.fillForm({ name: 'Jonas Jonaitis', email: 'jonas@test.lt', topic: 'other', message: MESSAGE });
-    await contactPage.attach(PNG);
-    await expect(contactPage.fileName).toHaveText(PNG.name);
+  test(
+    'TC-235: sends a message with an attachment and shows the ticket number',
+    { tag: '@smoke' },
+    async ({ contactPage }) => {
+      await contactPage.fillForm({ name: 'Jonas Jonaitis', email: 'jonas@test.lt', topic: 'other', message: MESSAGE });
+      await contactPage.attach(PNG);
+      await expect(contactPage.fileName).toHaveText(PNG.name);
 
-    await contactPage.submit();
+      await contactPage.submit();
 
-    await expect(contactPage.successPanel).toBeVisible();
-    await expect(contactPage.ticketNumber).toHaveText(/^KT-\d{4}$/);
-  });
+      await expect(contactPage.successPanel).toBeVisible();
+      await expect(contactPage.ticketNumber).toHaveText(/^KT-\d{4}$/);
+    },
+  );
 
-  test('rejects an attachment of an unsupported type', async ({ contactPage }) => {
+  test('TC-236: rejects an attachment of an unsupported type', async ({ contactPage }) => {
     await contactPage.attach({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
 
     await expect(contactPage.fileError).toHaveText('Leidžiami tik PNG, JPG arba PDF failai.');
     await expect(contactPage.fileName).toBeHidden();
   });
 
-  test('rejects an attachment over 2 MB', async ({ contactPage }) => {
+  test('TC-237: rejects an attachment over 2 MB', async ({ contactPage }) => {
     await contactPage.attach({
       name: 'big.pdf',
       mimeType: 'application/pdf',
@@ -44,7 +48,7 @@ test.describe('Contact form', { tag: '@e2e' }, () => {
     await expect(contactPage.fileError).toHaveText('Failas per didelis. Maksimalus dydis – 2 MB.');
   });
 
-  test('the order number field appears only for order-related topics', async ({ contactPage }) => {
+  test('TC-238: the order number field appears only for order-related topics', async ({ contactPage }) => {
     await expect(contactPage.orderNumberInput).toBeHidden();
 
     await contactPage.topicSelect.selectOption('order');
@@ -54,13 +58,13 @@ test.describe('Contact form', { tag: '@e2e' }, () => {
     await expect(contactPage.orderNumberInput).toBeHidden();
   });
 
-  test('the character counter follows the message', async ({ contactPage }) => {
+  test('TC-239: the character counter follows the message', async ({ contactPage }) => {
     await contactPage.messageInput.fill(MESSAGE);
 
     await expect(contactPage.messageCounter).toHaveText(`${MESSAGE.length} / 500`);
   });
 
-  test('validates the form before sending', async ({ contactPage }) => {
+  test('TC-240: validates the form before sending', async ({ contactPage }) => {
     await contactPage.fillForm({
       name: 'J',
       email: 'jonas@',
@@ -78,7 +82,7 @@ test.describe('Contact form', { tag: '@e2e' }, () => {
     await expect(contactPage.successPanel).toBeHidden();
   });
 
-  test('a logged-in user gets name and email prefilled', async ({ loggedInUser, contactPage }) => {
+  test('TC-241: a logged-in user gets name and email prefilled', async ({ loggedInUser, contactPage }) => {
     await contactPage.goto();
 
     await expect(contactPage.nameInput).toHaveValue(`${loggedInUser.data.firstName} ${loggedInUser.data.lastName}`);

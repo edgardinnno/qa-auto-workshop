@@ -5,7 +5,7 @@ import { expectApiError, parseOk } from '../../src/utils/api-assertions';
 import { expectSchema } from '../../src/utils/schema';
 
 test.describe('Cart — items', { tag: '@api' }, () => {
-  test('a new user starts with an empty cart', async ({ testUser }) => {
+  test('TC-108: a new user starts with an empty cart', async ({ testUser }) => {
     const cart = await parseOk<Cart>(await testUser.api.cart.get());
 
     expectSchema(cart, 'Cart');
@@ -13,7 +13,7 @@ test.describe('Cart — items', { tag: '@api' }, () => {
     expect(cart.totals).toMatchObject({ subtotal: 0, shipping: 0, total: 0 });
   });
 
-  test('adds an item', { tag: '@smoke' }, async ({ testUser }) => {
+  test('TC-109: adds an item', { tag: '@smoke' }, async ({ testUser }) => {
     const cart = await parseOk<Cart>(await testUser.api.cart.addItem({ productId: PRODUCTS.mug.id, quantity: 2 }), 201);
 
     expectSchema(cart, 'Cart');
@@ -22,7 +22,7 @@ test.describe('Cart — items', { tag: '@api' }, () => {
     expect(cart.itemCount).toBe(2);
   });
 
-  test('adding the same variant again sums the quantity on one line', async ({ testUser }) => {
+  test('TC-110: adding the same variant again sums the quantity on one line', async ({ testUser }) => {
     await testUser.api.cart.addItem({ productId: PRODUCTS.mug.id, quantity: 1 });
     const cart = await parseOk<Cart>(await testUser.api.cart.addItem({ productId: PRODUCTS.mug.id, quantity: 2 }), 201);
 
@@ -30,7 +30,7 @@ test.describe('Cart — items', { tag: '@api' }, () => {
     expect(cart.items[0].quantity).toBe(3);
   });
 
-  test('different variants of one product are separate lines', async ({ testUser }) => {
+  test('TC-111: different variants of one product are separate lines', async ({ testUser }) => {
     const [black, white] = PRODUCTS.headphones.colors;
     await testUser.api.cart.addItem({ productId: PRODUCTS.headphones.id, color: black });
     const cart = await parseOk<Cart>(
@@ -41,19 +41,19 @@ test.describe('Cart — items', { tag: '@api' }, () => {
     expect(cart.items.map((i) => i.color)).toEqual([black, white]);
   });
 
-  test('a product with sizes requires a size', async ({ testUser }) => {
+  test('TC-112: a product with sizes requires a size', async ({ testUser }) => {
     const res = await testUser.api.cart.addItem({ productId: PRODUCTS.tShirt.id, color: PRODUCTS.tShirt.colors[0] });
 
     await expectApiError(res, 422, 'VALIDATION_ERROR', { size: /dydį/ });
   });
 
-  test('an unknown colour is rejected', async ({ testUser }) => {
+  test('TC-113: an unknown colour is rejected', async ({ testUser }) => {
     const res = await testUser.api.cart.addItem({ productId: PRODUCTS.headphones.id, color: 'Raudona' });
 
     await expectApiError(res, 422, 'VALIDATION_ERROR', { color: /Galimos spalvos/ });
   });
 
-  test('quantity must be between 1 and 99', async ({ testUser }) => {
+  test('TC-114: quantity must be between 1 and 99', async ({ testUser }) => {
     await expectApiError(
       await testUser.api.cart.addItem({ productId: PRODUCTS.mug.id, quantity: 100 }),
       422,
@@ -62,11 +62,11 @@ test.describe('Cart — items', { tag: '@api' }, () => {
     );
   });
 
-  test('a sold-out product cannot be added', async ({ testUser }) => {
+  test('TC-115: a sold-out product cannot be added', async ({ testUser }) => {
     await expectApiError(await testUser.api.cart.addItem({ productId: PRODUCTS.speaker.id }), 409, 'OUT_OF_STOCK');
   });
 
-  test('cannot add more than the stock, counting what is already in the cart', async ({ testUser }) => {
+  test('TC-116: cannot add more than the stock, counting what is already in the cart', async ({ testUser }) => {
     await parseOk<Cart>(
       await testUser.api.cart.addItem({ productId: PRODUCTS.keyboard.id, quantity: PRODUCTS.keyboard.stock }),
       201,
@@ -75,11 +75,11 @@ test.describe('Cart — items', { tag: '@api' }, () => {
     await expectApiError(await testUser.api.cart.addItem({ productId: PRODUCTS.keyboard.id }), 409, 'OUT_OF_STOCK');
   });
 
-  test('an unknown product returns 404', async ({ testUser }) => {
+  test('TC-117: an unknown product returns 404', async ({ testUser }) => {
     await expectApiError(await testUser.api.cart.addItem({ productId: 'p999' }), 404, 'PRODUCT_NOT_FOUND');
   });
 
-  test('updates the quantity of a line', async ({ testUser }) => {
+  test('TC-118: updates the quantity of a line', async ({ testUser }) => {
     const { items } = await parseOk<Cart>(await testUser.api.cart.addItem({ productId: PRODUCTS.mug.id }), 201);
 
     const cart = await parseOk<Cart>(await testUser.api.cart.updateItem(items[0].id, 5));
@@ -87,7 +87,7 @@ test.describe('Cart — items', { tag: '@api' }, () => {
     expect(cart.items[0].quantity).toBe(5);
   });
 
-  test('updating above the stock is rejected', async ({ testUser }) => {
+  test('TC-119: updating above the stock is rejected', async ({ testUser }) => {
     const { items } = await parseOk<Cart>(await testUser.api.cart.addItem({ productId: PRODUCTS.keyboard.id }), 201);
 
     await expectApiError(
@@ -97,7 +97,7 @@ test.describe('Cart — items', { tag: '@api' }, () => {
     );
   });
 
-  test('removes a line, and the promo is dropped when the cart becomes empty', async ({ testUser }) => {
+  test('TC-120: removes a line, and the promo is dropped when the cart becomes empty', async ({ testUser }) => {
     const { items } = await parseOk<Cart>(await testUser.api.cart.addItem({ productId: PRODUCTS.mug.id }), 201);
     await parseOk<Cart>(await testUser.api.cart.applyPromo(PROMO_CODES.percent10));
 
@@ -107,14 +107,14 @@ test.describe('Cart — items', { tag: '@api' }, () => {
     expect(cart.promo).toBeNull();
   });
 
-  test('DELETE /cart empties it', async ({ testUser }) => {
+  test('TC-121: DELETE /cart empties it', async ({ testUser }) => {
     await testUser.api.cart.addItem({ productId: PRODUCTS.mug.id });
 
     expect((await testUser.api.cart.clear()).status()).toBe(204);
     expect((await parseOk<Cart>(await testUser.api.cart.get())).items).toEqual([]);
   });
 
-  test("a user cannot modify another user's cart line", async ({ testUser, createUser }) => {
+  test("TC-122: a user cannot modify another user's cart line", async ({ testUser, createUser }) => {
     const other = await createUser();
     const { items } = await parseOk<Cart>(await other.api.cart.addItem({ productId: PRODUCTS.mug.id }), 201);
 
@@ -132,34 +132,40 @@ test.describe('Cart — totals & promo codes', { tag: '@api' }, () => {
   }
 
   const totalsCases: {
+    id: string;
     name: string;
     quantity: number;
     promo?: string;
     expected: { subtotal: number; discount: number; shipping: number; total: number };
   }[] = [
     {
+      id: 'TC-123',
       name: 'courier shipping below the free-shipping threshold',
       quantity: 1,
       expected: { subtotal: 9.99, discount: 0, shipping: SHIPPING.courier.price, total: 14.98 },
     },
     {
+      id: 'TC-124',
       name: 'free shipping at ≥ 50 €',
       quantity: 6,
       expected: { subtotal: 59.94, discount: 0, shipping: 0, total: 59.94 },
     },
     {
+      id: 'TC-125',
       name: 'PLAYWRIGHT10 takes 10 % off the subtotal',
       quantity: 1,
       promo: PROMO_CODES.percent10,
       expected: { subtotal: 9.99, discount: 1, shipping: SHIPPING.courier.price, total: 13.98 },
     },
     {
+      id: 'TC-126',
       name: 'NEMOKAMAS removes shipping',
       quantity: 1,
       promo: PROMO_CODES.freeShipping,
       expected: { subtotal: 9.99, discount: 0, shipping: 0, total: 9.99 },
     },
     {
+      id: 'TC-127',
       name: 'the free-shipping threshold is checked after the discount',
       quantity: 6,
       promo: PROMO_CODES.percent10,
@@ -167,8 +173,8 @@ test.describe('Cart — totals & promo codes', { tag: '@api' }, () => {
     },
   ];
 
-  for (const { name, quantity, promo, expected } of totalsCases) {
-    test(`totals: ${name}`, async ({ testUser }) => {
+  for (const { id, name, quantity, promo, expected } of totalsCases) {
+    test(`${id}: totals: ${name}`, async ({ testUser }) => {
       await arrangeCart(testUser, quantity, promo);
 
       const { totals } = await parseOk<Cart>(await testUser.api.cart.get());
@@ -181,7 +187,7 @@ test.describe('Cart — totals & promo codes', { tag: '@api' }, () => {
     });
   }
 
-  test('DIDELIS20 applies 20 % once the subtotal reaches 100 €', async ({ testUser }) => {
+  test('TC-128: DIDELIS20 applies 20 % once the subtotal reaches 100 €', async ({ testUser }) => {
     await testUser.api.cart.addItem({ productId: PRODUCTS.keyboard.id });
 
     const { totals, promo } = await parseOk<Cart>(await testUser.api.cart.applyPromo(PROMO_CODES.percent20Min100));
@@ -190,24 +196,24 @@ test.describe('Cart — totals & promo codes', { tag: '@api' }, () => {
     expect(totals).toMatchObject({ subtotal: 109, discount: 21.8, shipping: 0, total: 87.2 });
   });
 
-  test('DIDELIS20 is rejected below 100 €', async ({ testUser }) => {
+  test('TC-129: DIDELIS20 is rejected below 100 €', async ({ testUser }) => {
     await testUser.api.cart.addItem({ productId: mug.id });
 
     await expectApiError(await testUser.api.cart.applyPromo(PROMO_CODES.percent20Min100), 422, 'PROMO_MIN_AMOUNT');
   });
 
-  test('applying the same code twice → 409', async ({ testUser }) => {
+  test('TC-130: applying the same code twice → 409', async ({ testUser }) => {
     await testUser.api.cart.addItem({ productId: mug.id });
     await parseOk<Cart>(await testUser.api.cart.applyPromo(PROMO_CODES.percent10));
 
     await expectApiError(await testUser.api.cart.applyPromo(PROMO_CODES.percent10), 409, 'PROMO_ALREADY_APPLIED');
   });
 
-  test('a promo cannot be applied to an empty cart', async ({ testUser }) => {
+  test('TC-131: a promo cannot be applied to an empty cart', async ({ testUser }) => {
     await expectApiError(await testUser.api.cart.applyPromo(PROMO_CODES.percent10), 422, 'CART_EMPTY');
   });
 
-  test('removing the promo restores the original total', async ({ testUser }) => {
+  test('TC-132: removing the promo restores the original total', async ({ testUser }) => {
     await testUser.api.cart.addItem({ productId: mug.id });
     await testUser.api.cart.applyPromo(PROMO_CODES.percent10);
 

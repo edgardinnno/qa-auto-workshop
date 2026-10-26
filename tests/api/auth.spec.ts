@@ -6,7 +6,7 @@ import { expectApiError, parseOk } from '../../src/utils/api-assertions';
 import { expectSchema } from '../../src/utils/schema';
 
 test.describe('Auth — registration', { tag: '@api' }, () => {
-  test('registers a new user', { tag: '@smoke' }, async ({ api }) => {
+  test('TC-004: registers a new user', { tag: '@smoke' }, async ({ api }) => {
     const data = buildUser();
 
     const res = await api.auth.register(data);
@@ -28,40 +28,100 @@ test.describe('Auth — registration', { tag: '@api' }, () => {
     expect((await api.withToken(token).users.deleteMe()).status()).toBe(204);
   });
 
-  test('rejects an email that is already registered', async ({ api, testUser }) => {
+  test('TC-005: rejects an email that is already registered', async ({ api, testUser }) => {
     const res = await api.auth.register(buildUser({ email: testUser.data.email }));
 
     await expectApiError(res, 409, 'EMAIL_TAKEN', { email: /užimtas/ });
   });
 
-  test('normalises email to lower case, so case variants are duplicates', async ({ api, testUser }) => {
+  test('TC-006: normalises email to lower case, so case variants are duplicates', async ({ api, testUser }) => {
     const res = await api.auth.register(buildUser({ email: testUser.data.email.toUpperCase() }));
 
     await expectApiError(res, 409, 'EMAIL_TAKEN');
   });
 
-  const invalidCases: { name: string; overrides: Record<string, unknown>; field: string; message: RegExp }[] = [
-    { name: 'missing first name', overrides: { firstName: '' }, field: 'firstName', message: /Įveskite vardą/ },
-    { name: 'one-letter first name', overrides: { firstName: 'A' }, field: 'firstName', message: /bent 2/ },
-    { name: 'digits in last name', overrides: { lastName: 'Jonaitis2' }, field: 'lastName', message: /tik raidės/ },
-    { name: 'malformed email', overrides: { email: 'not-an-email' }, field: 'email', message: /formatas/ },
-    { name: 'phone in wrong format', overrides: { phone: '860000000' }, field: 'phone', message: /\+370/ },
-    { name: 'under 18', overrides: { birthDate: birthDateYearsAgo(17) }, field: 'birthDate', message: /nuo 18/ },
-    { name: 'date in wrong format', overrides: { birthDate: '01/06/1995' }, field: 'birthDate', message: /YYYY-MM-DD/ },
-    { name: 'unsupported country', overrides: { country: 'US' }, field: 'country', message: /LT/ },
-    { name: 'password without digit', overrides: { password: 'Testas!!' }, field: 'password', message: /skaičius/ },
-    { name: 'password too short', overrides: { password: 'Te1!' }, field: 'password', message: /8 simbolių/ },
+  const invalidCases: {
+    id: string;
+    name: string;
+    overrides: Record<string, unknown>;
+    field: string;
+    message: RegExp;
+  }[] = [
+    {
+      id: 'TC-007',
+      name: 'missing first name',
+      overrides: { firstName: '' },
+      field: 'firstName',
+      message: /Įveskite vardą/,
+    },
+    {
+      id: 'TC-008',
+      name: 'one-letter first name',
+      overrides: { firstName: 'A' },
+      field: 'firstName',
+      message: /bent 2/,
+    },
+    {
+      id: 'TC-009',
+      name: 'digits in last name',
+      overrides: { lastName: 'Jonaitis2' },
+      field: 'lastName',
+      message: /tik raidės/,
+    },
+    {
+      id: 'TC-010',
+      name: 'malformed email',
+      overrides: { email: 'not-an-email' },
+      field: 'email',
+      message: /formatas/,
+    },
+    {
+      id: 'TC-011',
+      name: 'phone in wrong format',
+      overrides: { phone: '860000000' },
+      field: 'phone',
+      message: /\+370/,
+    },
+    {
+      id: 'TC-012',
+      name: 'under 18',
+      overrides: { birthDate: birthDateYearsAgo(17) },
+      field: 'birthDate',
+      message: /nuo 18/,
+    },
+    {
+      id: 'TC-013',
+      name: 'date in wrong format',
+      overrides: { birthDate: '01/06/1995' },
+      field: 'birthDate',
+      message: /YYYY-MM-DD/,
+    },
+    { id: 'TC-014', name: 'unsupported country', overrides: { country: 'US' }, field: 'country', message: /LT/ },
+    {
+      id: 'TC-015',
+      name: 'password without digit',
+      overrides: { password: 'Testas!!' },
+      field: 'password',
+      message: /skaičius/,
+    },
+    {
+      id: 'TC-016',
+      name: 'password too short',
+      overrides: { password: 'Te1!' },
+      field: 'password',
+      message: /8 simbolių/,
+    },
   ];
 
-  for (const { name, overrides, field, message } of invalidCases) {
-    test(`rejects registration: ${name}`, async ({ api }) => {
+  for (const { id, name, overrides, field, message } of invalidCases) {
+    test(`${id}: rejects registration: ${name}`, async ({ api }) => {
       const res = await api.auth.register({ ...buildUser(), ...overrides });
 
       await expectApiError(res, 422, 'VALIDATION_ERROR', { [field]: message });
     });
   }
 
-  test('rejects a body that is not valid JSON', async ({ apiContext }) => {
+  test('TC-017: rejects a body that is not valid JSON', async ({ apiContext }) => {
     const res = await apiContext.post('auth/register', {
       headers: { 'Content-Type': 'application/json' },
       data: '{ not json',
@@ -72,7 +132,7 @@ test.describe('Auth — registration', { tag: '@api' }, () => {
 });
 
 test.describe('Auth — login & logout', { tag: '@api' }, () => {
-  test('logs in and returns a Bearer token', { tag: '@smoke' }, async ({ api, testUser }) => {
+  test('TC-018: logs in and returns a Bearer token', { tag: '@smoke' }, async ({ api, testUser }) => {
     const body = await parseOk<LoginResponse>(await api.auth.login(testUser.data.email, testUser.data.password));
 
     expectSchema(body, 'LoginResponse');
@@ -81,7 +141,7 @@ test.describe('Auth — login & logout', { tag: '@api' }, () => {
     expect(body.user.email).toBe(testUser.data.email);
   });
 
-  test('"remember me" extends the session to 7 days', async ({ api, testUser }) => {
+  test('TC-019: "remember me" extends the session to 7 days', async ({ api, testUser }) => {
     const short = await parseOk<LoginResponse>(await api.auth.login(testUser.data.email, testUser.data.password));
     const long = await parseOk<LoginResponse>(await api.auth.login(testUser.data.email, testUser.data.password, true));
 
@@ -91,37 +151,37 @@ test.describe('Auth — login & logout', { tag: '@api' }, () => {
     expect(hours(long.expiresAt)).toBeGreaterThan(24 * 7 - 1);
   });
 
-  test('rejects a wrong password', async ({ api, testUser }) => {
+  test('TC-020: rejects a wrong password', async ({ api, testUser }) => {
     const res = await api.auth.login(testUser.data.email, 'Wrong123!');
 
     await expectApiError(res, 401, 'INVALID_CREDENTIALS');
   });
 
-  test('rejects an unknown email with the same error (no user enumeration)', async ({ api }) => {
+  test('TC-021: rejects an unknown email with the same error (no user enumeration)', async ({ api }) => {
     const res = await api.auth.login('nobody-here@test.lt', 'Wrong123!');
 
     await expectApiError(res, 401, 'INVALID_CREDENTIALS');
   });
 
-  test('locked account cannot log in', async ({ api }) => {
+  test('TC-022: locked account cannot log in', async ({ api }) => {
     const res = await api.auth.login(DEMO_USERS.locked, DEMO_PASSWORD);
 
     await expectApiError(res, 403, 'ACCOUNT_LOCKED');
   });
 
-  test('missing credentials fail validation', async ({ api }) => {
+  test('TC-023: missing credentials fail validation', async ({ api }) => {
     const res = await api.auth.login('', '');
 
     await expectApiError(res, 422, 'VALIDATION_ERROR', { email: /el. pašto/, password: /slaptažodį/ });
   });
 
-  test('logout revokes the token', async ({ testUser }) => {
+  test('TC-024: logout revokes the token', async ({ testUser }) => {
     expect((await testUser.api.auth.logout()).status()).toBe(204);
 
     await expectApiError(await testUser.api.users.me(), 401, 'INVALID_TOKEN');
   });
 
-  test('slow demo user still logs in (2.5–4 s latency)', async ({ api }) => {
+  test('TC-025: slow demo user still logs in (2.5–4 s latency)', async ({ api }) => {
     test.slow();
     const started = Date.now();
 
